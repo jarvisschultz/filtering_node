@@ -1,0 +1,9 @@
+bin/
+build/
+lib/
+
+*.zip
+*.o
+*.tar
+*.bz2
+*.exe
