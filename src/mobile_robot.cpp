@@ -23,15 +23,17 @@ using namespace MatrixWrapper;
 namespace BFL
 {
 
-    MobileRobot::MobileRobot():
+    MobileRobot::MobileRobot(MatrixWrapper::ColumnVector _init):
         _state(STATE_SIZE)
     {
-	
 	// initial state
-	_state(1) = X_0;
-	_state(2) = Y_0;
-	_state(3) = THETA_0;
+	// _state(1) = X_0;
+	// _state(2) = Y_0;
+	// _state(3) = THETA_0;
 
+	for (unsigned int i=1; i<=STATE_SIZE; i++)
+	    _state(i) = _init(i);
+	
 	// sys noise
 	ColumnVector sys_noise_Mu(STATE_SIZE);
 	sys_noise_Mu(1) = MU_SYSTEM_NOISE_X_ROB;

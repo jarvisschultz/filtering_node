@@ -48,7 +48,9 @@ namespace BFL{
     {
     public:
       // Constructor
-      MobileRobot();
+      /* MobileRobot(); */
+	MobileRobot(MatrixWrapper::ColumnVector _init);
+      // Destructor
       ~MobileRobot();
 
       void Move(MatrixWrapper::ColumnVector inputs);

@@ -72,7 +72,9 @@ private:
     nav_msgs::Odometry kin_pose, est_pose;
     tf::TransformListener tf;
     tf::TransformBroadcaster br;
-    ColumnVector sys_noise_mu, prior_mu, input, measurement, meas_noise_mu;
+    geometry_msgs::PointStamped current_command;
+    nav_msgs::Odometry current_measurement;
+    ColumnVector sys_noise_mu, prior_mu, measurement, meas_noise_mu, input;    
     SymmetricMatrix sys_noise_cov, prior_cov, meas_noise_cov;
     // Gaussian system_uncertainty, measurement_uncertainty;
     Gaussian* prior_cont;
@@ -81,7 +83,8 @@ private:
     LinearAnalyticConditionalGaussian* meas_pdf;
     LinearAnalyticMeasurementModelGaussianUncertainty* meas_model;
     ExtendedKalmanFilter* filter;
-    MobileRobot mobile_robot;
+    MobileRobot* mobile_robot;
+    
 
 public:
     // Constructor
@@ -90,7 +93,8 @@ public:
 	kin_sub = node_.subscribe("/vo", 10, &FilterGenerator::kinectcb, this);
 	input_sub = node_.subscribe
 	    ("/serviced_values", 10, &FilterGenerator::inputcb, this);
-	timer = node_.createTimer(ros::Duration(0.033), &FilterGenerator::timercb, this);
+	timer = node_.createTimer
+	    (ros::Duration(0.033), &FilterGenerator::timercb, this);
 
 	// Initialize misc variables:
 	tstamp = ros::Time::now();
@@ -115,20 +119,21 @@ public:
 	Gaussian system_uncertainty(sys_noise_mu, sys_noise_cov);
 
 	// Create system model:
-	sys_pdf = new BFL::NonLinearAnalyticConditionalGaussianMobile(system_uncertainty);
+	sys_pdf = new BFL::
+	    NonLinearAnalyticConditionalGaussianMobile(system_uncertainty);
 	sys_model = new BFL::AnalyticSystemModelGaussianUncertainty(sys_pdf);
-
+ 
 
 	//************************//
 	// Setup measurement model:
 	//************************//
-	SymmetricMatrix Hmat(NUM_STATES);
+	Matrix Hmat(NUM_STATES, NUM_STATES);
 	Hmat = 0.0;
 	Hmat(1,1) = 1;
 	Hmat(2,2) = 1;
 	Hmat(3,3) = 1;
 
-	ColumnVector meas_nose_mu(NUM_STATES);
+	ColumnVector meas_noise_mu(NUM_STATES);
 	meas_noise_mu(1) = 0.0;
 	meas_noise_mu(2) = 0.0;
 	meas_noise_mu(3) = 0.0;
@@ -145,40 +150,111 @@ public:
 	// create system model:
 	meas_pdf = new BFL::LinearAnalyticConditionalGaussian(
 	    Hmat, measurement_uncertainty);
-	meas_model = new BFL::LinearAnalyticMeasurementModelGaussianUncertainty(meas_pdf);
+	meas_model = new BFL::
+	    LinearAnalyticMeasurementModelGaussianUncertainty(meas_pdf);
 
+	//******************************//
+	// Instantiate a MobileRobot
+	//******************************//
+	// First get the initial parameters published by the control node
+	ColumnVector init(STATE_SIZE);
+	init = 0.0;
+	if(ros::param::has("/robot_x0"))
+	{
+	    // Get robot's starting position in
+	    // optimization coordinate system
+	    double temp;
+	    ros::param::get("/robot_x0", temp);
+	    init(0) = temp;
+	    ros::param::get("/robot_z0", temp);
+	    init(1) = temp;
+	    ros::param::get("/robot_th0", temp);
 
+	    temp = clamp_angle(temp-M_PI/2.0);
+	    init(2) = temp;
+	    // Initialize robot:
+	    mobile_robot = new MobileRobot(init);
+	}
+	else
+	{
+	    ROS_ERROR("NO STARTING INFORMATION:"\
+		      "Must run control node before starting this node!");
+	    exit(0);
+	}
+
+	// Get inputs initialized:
+	input.resize(2);
+	
+		      
 	//******************************//
 	// Setup initial parameters:
 	//******************************//
+	ColumnVector prior_mu(STATE_SIZE);
+	for (unsigned int i = 1; i<=STATE_SIZE; i++)
+	    prior_mu(i) = init(i);
+	SymmetricMatrix prior_cov(STATE_SIZE);
+	prior_cov = 0;
+	prior_cov(1,1) = KIN_COV_DIST;
+	prior_cov(2,2) = KIN_COV_DIST;
+	prior_cov(3,3) = KIN_COV_ORI;
 
-
+	prior_cont = new Gaussian(prior_mu, prior_cov);
+		
 	// Create filter:
-	
+	filter = new ExtendedKalmanFilter(prior_cont);
 			
 	// Now we are ready to run the filter:
 	ROS_INFO("Starting Kalman Estimator...");
     }
 
-    // // Destructor
-    // ~KalmanFilter(){
-    // 	delete timer;
-    // 	delete input_sub;
-    // 	delete kin_sub;
-    // }
+    
+
+    // Destructor
+    ~FilterGenerator(){
+    	delete prior_cont;
+    	delete filter;
+	delete sys_pdf;
+	delete sys_model;
+	delete meas_pdf;
+	delete meas_model;
+	delete mobile_robot;
+    }
+
+
+
+    
 
     // In this callback, let's just update the current measurement 
-    void kinectcb(const nav_msgs::Odometry pose)
+    void kinectcb(const nav_msgs::Odometry p)
 	{
-	    // measurement(1) = 
+	    measurement(1) = p.pose.pose.position.x;
+	    measurement(2) = p.pose.pose.position.y;
+
+	    double theta = tf::getYaw(p.pose.pose.orientation);
+	    theta = clamp_angle(theta);
+	    measurement(3) = theta;
+	    
+	    current_measurement = p;
 	    return;
 	}
 
+
+
+
+    
+
     // in this callback, let's update the local values of the inputs
-    void inputcb(const geometry_msgs::PointStamped)
+    void inputcb(const geometry_msgs::PointStamped sent)
 	{
+	    input(1) = sent.point.x;
+	    input(2) = sent.point.y;
+	    current_command = sent;
 	    return;
 	}
+
+
+
+    
 
     // in this callback, let's integrate the model forward to get an
     // expectation, then run the filter forward in time, and then
@@ -189,6 +265,21 @@ public:
 	    return;
 	}
 
+
+
+
+
+    
+    double clamp_angle(double theta)
+	{
+	    double th = theta;
+	    while(th > M_PI)
+		th -= 2.0*M_PI;
+	    while(th <= M_PI)
+		th += 2.0*M_PI;
+	    return th;
+	}
+    
 };// End class
 
 
