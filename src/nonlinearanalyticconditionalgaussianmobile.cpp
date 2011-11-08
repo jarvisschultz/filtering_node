@@ -40,7 +40,7 @@ namespace BFL
     ColumnVector vel  = ConditionalArgumentGet(1);
     state(1) += cos(state(3)) * vel(1);
     state(2) += sin(state(3)) * vel(1);
-    state(3) += vel(2);
+    state(3) += -1.0*vel(2);
     return state + AdditiveNoiseMuGet();
   }
 

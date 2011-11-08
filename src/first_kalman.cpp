@@ -58,7 +58,6 @@ using namespace std;
 #define SYS_COV_ORI	(0.01)
 #define FILTER_TIMEOUT	(1.0)
 
-
 //---------------------------------------------------------------------------
 // Objects and Functions
 //---------------------------------------------------------------------------
@@ -96,7 +95,8 @@ public:
 	    ("/serviced_values", 10, &FilterGenerator::inputcb, this);
 	// timer = node_.createTimer
 	//     (ros::Duration(0.01), &FilterGenerator::timercb, this);
-
+	est_pub = node_.advertise<nav_msgs::Odometry> ("pose_ekf", 100);
+	
 	// Initialize misc variables:
 	tstamp = ros::Time::now();
 
@@ -168,7 +168,7 @@ public:
 	    ros::param::get("/robot_x0", temp);
 	    init(0) = temp;
 	    ros::param::get("/robot_z0", temp);
-	    init(1) = temp;
+	    init(1) = -temp;
 	    ros::param::get("/robot_th0", temp);
 
 	    temp = clamp_angle(temp-M_PI/2.0);
@@ -271,12 +271,20 @@ public:
 	    ColumnVector curr_state = posterior->ExpectedValueGet();
 	    curr_state(3) = clamp_angle(curr_state(3));
 
-	    
-	    
+	    est_pose.header.stamp = p.header.stamp;
+	    est_pose.header.frame_id = "odom_combined";
+	    est_pose.child_frame_id = "base_footprint_mine";
+	    est_pose.pose.pose.position.x = curr_state(1);
+	    est_pose.pose.pose.position.y = curr_state(2);
+	    est_pose.pose.pose.position.z = 0.0;
+
+	    geometry_msgs::Quaternion quat = tf::createQuaternionMsgFromYaw(curr_state(3));
+	    est_pose.pose.pose.orientation = quat;
+
+	    est_pub.publish(est_pose);
 	    
 	    return;
 	}
-
 
 
 
@@ -312,16 +320,6 @@ public:
     // 	{
     // 	    return;
     // 	}
-
-
-    // // This function looks at the 
-    // double mod_measurement_angle(double meas, double est)
-    // 	{
-
-
-	    
-    // 	}
-    
 
 
 

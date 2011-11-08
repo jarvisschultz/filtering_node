@@ -87,16 +87,25 @@ namespace BFL
 	delete _meas_model;
     }
 
+
+    double
+    MobileRobot::clamp_angle(double theta)
+	{
+	    double th = theta;
+	    while(th > M_PI)
+		th -= 2.0*M_PI;
+	    while(th <= M_PI)
+		th += 2.0*M_PI;
+	    return th;
+	}
+	
+
     void
     MobileRobot::Move(ColumnVector inputs)
     {
 	_state = _sys_model->Simulate(_state,inputs);
-	while(_state(3) > M_PI)
-	    _state(3) -= 2.0*M_PI;
-	while(_state(3) <= M_PI)
-	    _state(3) += 2.0*M_PI;
+	_state(3) = clamp_angle(_state(3));
     }
-
 
     ColumnVector
     MobileRobot::Measure()
