@@ -31,7 +31,8 @@ namespace BFL
      - Covariance is independent of the ConditionalArguments, and is
      the covariance of the Noise pdf
   */
-  class NonLinearAnalyticConditionalGaussianMobile : public AnalyticConditionalGaussianAdditiveNoise
+  class NonLinearAnalyticConditionalGaussianMobile :
+    public AnalyticConditionalGaussianAdditiveNoise
     {
     public:
       /// Constructor

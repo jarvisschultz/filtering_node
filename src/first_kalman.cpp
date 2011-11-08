@@ -56,6 +56,7 @@ using namespace std;
 #define KIN_COV_ORI	(0.2)
 #define SYS_COV_DIST	(0.001)
 #define SYS_COV_ORI	(0.01)
+#define FILTER_TIMEOUT	(1.0)
 
 
 //---------------------------------------------------------------------------
@@ -66,14 +67,14 @@ class FilterGenerator {
 private:
     ros::NodeHandle node_;
     ros::Publisher est_pub;
-    ros::Timer timer;
-    ros::Time t_now, t_last, tstamp;
+    // ros::Timer timer;
+    ros::Time  tstamp; // model_time;
     ros::Subscriber input_sub, kin_sub;
-    nav_msgs::Odometry kin_pose, est_pose;
+    nav_msgs::Odometry est_pose;
     tf::TransformListener tf;
     tf::TransformBroadcaster br;
-    geometry_msgs::PointStamped current_command;
-    nav_msgs::Odometry current_measurement;
+    geometry_msgs::PointStamped current_command, last_command;
+    nav_msgs::Odometry current_measurement, last_measurement;
     ColumnVector sys_noise_mu, prior_mu, measurement, meas_noise_mu, input;    
     SymmetricMatrix sys_noise_cov, prior_cov, meas_noise_cov;
     // Gaussian system_uncertainty, measurement_uncertainty;
@@ -93,8 +94,8 @@ public:
 	kin_sub = node_.subscribe("/vo", 10, &FilterGenerator::kinectcb, this);
 	input_sub = node_.subscribe
 	    ("/serviced_values", 10, &FilterGenerator::inputcb, this);
-	timer = node_.createTimer
-	    (ros::Duration(0.033), &FilterGenerator::timercb, this);
+	// timer = node_.createTimer
+	//     (ros::Duration(0.01), &FilterGenerator::timercb, this);
 
 	// Initialize misc variables:
 	tstamp = ros::Time::now();
@@ -224,17 +225,55 @@ public:
 
     
 
-    // In this callback, let's just update the current measurement 
+    // In this callback, let's update the current measurement, check
+    // angles, then update the filter, then publish the results.
     void kinectcb(const nav_msgs::Odometry p)
 	{
+	    static bool first_flag = true;
+	    if (first_flag)
+	    {
+		last_measurement.header.stamp = p.header.stamp;
+		first_flag = false;
+		return;
+	    }
+	    
 	    measurement(1) = p.pose.pose.position.x;
 	    measurement(2) = p.pose.pose.position.y;
 
 	    double theta = tf::getYaw(p.pose.pose.orientation);
 	    theta = clamp_angle(theta);
 	    measurement(3) = theta;
-	    
+
+	    last_measurement = current_measurement;
 	    current_measurement = p;
+
+	    // check for timeout:
+	    double dt = (p.header.stamp - last_measurement.header.stamp).toSec();
+	    if (dt >= FILTER_TIMEOUT)
+	    {
+		ROS_WARN("Filter timeout detected");
+		first_flag = true;
+		return;
+	    }
+
+	    // Integrate the model forward in time:
+	    dt = (p.header.stamp-current_command.header.stamp).toSec();
+	    if(dt >= 0)
+		mobile_robot->Move(input*dt);
+	    else
+		ROS_WARN("Negative dt when integrating system kinematics");
+
+	    // Now we are ready to update the filter:
+	    filter->Update(sys_model, input*dt, meas_model, measurement);
+
+	    // Fill out the message to publish:
+	    Pdf<ColumnVector> * posterior = filter->PostGet();
+	    ColumnVector curr_state = posterior->ExpectedValueGet();
+	    curr_state(3) = clamp_angle(curr_state(3));
+
+	    
+	    
+	    
 	    return;
 	}
 
@@ -246,9 +285,20 @@ public:
     // in this callback, let's update the local values of the inputs
     void inputcb(const geometry_msgs::PointStamped sent)
 	{
-	    input(1) = sent.point.x;
-	    input(2) = sent.point.y;
-	    current_command = sent;
+	    if ((char) (sent.header.frame_id.c_str())[0] == 'd')
+	    {
+		input(1) = sent.point.x;
+		input(2) = sent.point.y;
+
+		last_command = current_command;
+		current_command = sent;
+
+		double dt = (sent.header.stamp
+			     -last_command.header.stamp).toSec();
+		if (dt >= FILTER_TIMEOUT)
+		    ROS_WARN("It has been longer than %f" \
+			     "s since a command was published",dt);
+	    }
 	    return;
 	}
 
@@ -256,16 +306,22 @@ public:
 
     
 
-    // in this callback, let's integrate the model forward to get an
-    // expectation, then run the filter forward in time, and then
-    // publish the results of the filter as well as a tf from /map to
-    // a robot frame
-    void timercb(const ros::TimerEvent& e)
-	{
-	    return;
-	}
+    // // in this callback, let's integrate the model forward to get an
+    // // expectation
+    // void timercb(const ros::TimerEvent& e)
+    // 	{
+    // 	    return;
+    // 	}
 
 
+    // // This function looks at the 
+    // double mod_measurement_angle(double meas, double est)
+    // 	{
+
+
+	    
+    // 	}
+    
 
 
 
