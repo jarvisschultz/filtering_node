@@ -190,9 +190,10 @@ public:
 	    exit(0);
 	}
 
-	// Get inputs initialized:
+	// Get inputs and measurements initialized:
 	ROS_DEBUG("Defining input size");
-	input.resize(2);
+	input.resize(NUM_INPUTS);
+	measurement.resize(NUM_STATES);
 	
 		      
 	//******************************//
@@ -239,6 +240,7 @@ public:
     // angles, then update the filter, then publish the results.
     void kinectcb(const nav_msgs::Odometry p)
 	{
+	    ROS_DEBUG("Kinect callback triggered");
 	    static bool first_flag = true;
 	    if (first_flag)
 	    {
@@ -246,7 +248,8 @@ public:
 		first_flag = false;
 		return;
 	    }
-	    
+
+	    ROS_DEBUG("Filling out measurement values");
 	    measurement(1) = p.pose.pose.position.x;
 	    measurement(2) = p.pose.pose.position.y;
 
@@ -254,9 +257,11 @@ public:
 	    theta = clamp_angle(theta);
 	    measurement(3) = theta;
 
+	    ROS_DEBUG("Storing measurements");
 	    last_measurement = current_measurement;
 	    current_measurement = p;
 
+	    ROS_DEBUG("Checking for filter timeout");
 	    // check for timeout:
 	    double dt = (p.header.stamp - last_measurement.header.stamp).toSec();
 	    if (dt >= FILTER_TIMEOUT)
@@ -267,16 +272,19 @@ public:
 	    }
 
 	    // Integrate the model forward in time:
-	    dt = (p.header.stamp-current_command.header.stamp).toSec();
+	    ROS_DEBUG("Integrating model forward in time");
+	    // dt = (p.header.stamp-current_command.header.stamp).toSec();
 	    if(dt >= 0)
 		mobile_robot->Move(input*dt);
 	    else
 		ROS_WARN("Negative dt when integrating system kinematics");
 
+	    ROS_DEBUG("Updating the filter");
 	    // Now we are ready to update the filter:
 	    filter->Update(sys_model, input*dt, meas_model, measurement);
 
 	    // Fill out the message to publish:
+	    ROS_DEBUG("Extracting and publishing posterior estimate");
 	    Pdf<ColumnVector> * posterior = filter->PostGet();
 	    ColumnVector curr_state = posterior->ExpectedValueGet();
 	    curr_state(3) = clamp_angle(curr_state(3));
@@ -291,8 +299,9 @@ public:
 	    geometry_msgs::Quaternion quat = tf::createQuaternionMsgFromYaw(curr_state(3));
 	    est_pose.pose.pose.orientation = quat;
 
+	    ROS_DEBUG("Publishing EFK Pose");
 	    est_pub.publish(est_pose);
-	    
+	    	    
 	    return;
 	}
 
@@ -303,8 +312,10 @@ public:
     // in this callback, let's update the local values of the inputs
     void inputcb(const geometry_msgs::PointStamped sent)
 	{
+	    ROS_DEBUG("Input callback triggered");
 	    if ((char) (sent.header.frame_id.c_str())[0] == 'd')
 	    {
+		ROS_DEBUG("Setting input values");
 		input(1) = sent.point.x;
 		input(2) = sent.point.y;
 
@@ -353,9 +364,8 @@ int main(int argc, char **argv)
     
     ros::init(argc, argv, "pose_ekf_mine");
 
-    log4cxx::LoggerPtr my_logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
-    my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Debug]);
-
+    // log4cxx::LoggerPtr my_logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
+    // my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Debug]);
 
     ros::NodeHandle node;
 
