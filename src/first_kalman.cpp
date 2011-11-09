@@ -31,6 +31,7 @@
 #include <Eigen/Core>
 #include <geometry_msgs/Point.h>
 #include <nav_msgs/Odometry.h>
+#include "log4cxx/logger.h"
 
 #include <math.h>
 
@@ -89,6 +90,7 @@ private:
 public:
     // Constructor
     FilterGenerator() {
+	ROS_DEBUG("Creating subscribers, and publishers");
 	// Setup ROS stuff:
 	kin_sub = node_.subscribe("/vo", 10, &FilterGenerator::kinectcb, this);
 	input_sub = node_.subscribe
@@ -105,6 +107,7 @@ public:
 	//********************//
 	// Setup system model:
 	//********************//
+	ROS_DEBUG("Defining system model");
 	ColumnVector sys_noise_mu(NUM_STATES);
 	sys_noise_mu(1) = 0.0;
 	sys_noise_mu(2) = 0.0;
@@ -120,6 +123,7 @@ public:
 	Gaussian system_uncertainty(sys_noise_mu, sys_noise_cov);
 
 	// Create system model:
+	ROS_DEBUG("Creating system model");
 	sys_pdf = new BFL::
 	    NonLinearAnalyticConditionalGaussianMobile(system_uncertainty);
 	sys_model = new BFL::AnalyticSystemModelGaussianUncertainty(sys_pdf);
@@ -128,6 +132,7 @@ public:
 	//************************//
 	// Setup measurement model:
 	//************************//
+	ROS_DEBUG("Defining measurement model");
 	Matrix Hmat(NUM_STATES, NUM_STATES);
 	Hmat = 0.0;
 	Hmat(1,1) = 1;
@@ -148,7 +153,8 @@ public:
 	// create measurement gaussian:
 	Gaussian measurement_uncertainty(meas_noise_mu, meas_noise_cov);
 	
-	// create system model:
+	// create measurement model:
+	ROS_DEBUG("Creating measurement model");
 	meas_pdf = new BFL::LinearAnalyticConditionalGaussian(
 	    Hmat, measurement_uncertainty);
 	meas_model = new BFL::
@@ -158,6 +164,7 @@ public:
 	// Instantiate a MobileRobot
 	//******************************//
 	// First get the initial parameters published by the control node
+	ROS_DEBUG("Creating a MobileRobot");
 	ColumnVector init(STATE_SIZE);
 	init = 0.0;
 	if(ros::param::has("/robot_x0"))
@@ -166,13 +173,13 @@ public:
 	    // optimization coordinate system
 	    double temp;
 	    ros::param::get("/robot_x0", temp);
-	    init(0) = temp;
+	    init(1) = temp;
 	    ros::param::get("/robot_z0", temp);
-	    init(1) = -temp;
+	    init(2) = -temp;
 	    ros::param::get("/robot_th0", temp);
 
 	    temp = clamp_angle(temp-M_PI/2.0);
-	    init(2) = temp;
+	    init(3) = temp;
 	    // Initialize robot:
 	    mobile_robot = new MobileRobot(init);
 	}
@@ -184,12 +191,14 @@ public:
 	}
 
 	// Get inputs initialized:
+	ROS_DEBUG("Defining input size");
 	input.resize(2);
 	
 		      
 	//******************************//
 	// Setup initial parameters:
 	//******************************//
+	ROS_DEBUG("Defining filter parameters");
 	ColumnVector prior_mu(STATE_SIZE);
 	for (unsigned int i = 1; i<=STATE_SIZE; i++)
 	    prior_mu(i) = init(i);
@@ -202,6 +211,7 @@ public:
 	prior_cont = new Gaussian(prior_mu, prior_cov);
 		
 	// Create filter:
+	ROS_DEBUG("Creating filter");
 	filter = new ExtendedKalmanFilter(prior_cont);
 			
 	// Now we are ready to run the filter:
@@ -339,6 +349,13 @@ public:
 
 int main(int argc, char **argv)
 {
+    ROSCONSOLE_AUTOINIT;
+    
+    ros::init(argc, argv, "pose_ekf_mine");
+
+    log4cxx::LoggerPtr my_logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
+    my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Debug]);
+
 
     ros::NodeHandle node;
 
