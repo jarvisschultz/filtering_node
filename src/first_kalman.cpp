@@ -53,8 +53,8 @@ using namespace std;
 //---------------------------------------------------------------------------
 #define NUM_STATES	(3)
 #define NUM_INPUTS	(2)
-#define KIN_COV_DIST	(0.0025)
-#define KIN_COV_ORI	(0.2)
+#define KIN_COV_DIST	(0.5)
+#define KIN_COV_ORI	(100.0)
 #define SYS_COV_DIST	(0.001)
 #define SYS_COV_ORI	(0.01)
 #define FILTER_TIMEOUT	(1.0)
@@ -75,7 +75,7 @@ private:
     tf::TransformBroadcaster br;
     geometry_msgs::PointStamped current_command, last_command;
     nav_msgs::Odometry current_measurement, last_measurement;
-    ColumnVector sys_noise_mu, prior_mu, measurement, meas_noise_mu, input;    
+    ColumnVector sys_noise_mu, prior_mu, measurement, meas_noise_mu, input;
     SymmetricMatrix sys_noise_cov, prior_cov, meas_noise_cov;
     // Gaussian system_uncertainty, measurement_uncertainty;
     Gaussian* prior_cont;
@@ -280,6 +280,11 @@ public:
 		ROS_WARN("Negative dt when integrating system kinematics");
 
 	    ROS_DEBUG("Updating the filter");
+
+	    // Now correct measured angle to be consistent with the estimate:
+	    ColumnVector s = mobile_robot->GetState();
+	    angle_correction(measurement(3), s(3));
+	    
 	    // Now we are ready to update the filter:
 	    filter->Update(sys_model, input*dt, meas_model, measurement);
 
@@ -342,6 +347,18 @@ public:
     // 	    return;
     // 	}
 
+
+
+
+
+    // in this function, we take in two angles, and using one as the
+    // reference, we keep adding and subtracting 2pi from the other to
+    // find the mininmum angle between the two:
+    void angle_correction(double& a, double& ref)
+	{
+	    while ((a-ref) > M_PI) a -= 2*M_PI;
+	    while ((a-ref) < -M_PI) a += 2*M_PI;
+	}
 
 
     

@@ -104,7 +104,7 @@ namespace BFL
     MobileRobot::Move(ColumnVector inputs)
     {
 	_state = _sys_model->Simulate(_state,inputs);
-	_state(3) = clamp_angle(_state(3));
+	// _state(3) = clamp_angle(_state(3));
     }
 
     ColumnVector
