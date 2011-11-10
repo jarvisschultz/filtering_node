@@ -26,11 +26,7 @@ namespace BFL
     MobileRobot::MobileRobot(MatrixWrapper::ColumnVector _init):
         _state(STATE_SIZE)
     {
-	// initial state
-	// _state(1) = X_0;
-	// _state(2) = Y_0;
-	// _state(3) = THETA_0;
-
+	// set initial state
 	for (unsigned int i=1; i<=STATE_SIZE; i++)
 	    _state(i) = _init(i);
 	
@@ -87,24 +83,10 @@ namespace BFL
 	delete _meas_model;
     }
 
-
-    double
-    MobileRobot::clamp_angle(double theta)
-	{
-	    double th = theta;
-	    while(th > M_PI)
-		th -= 2.0*M_PI;
-	    while(th <= M_PI)
-		th += 2.0*M_PI;
-	    return th;
-	}
-	
-
     void
     MobileRobot::Move(ColumnVector inputs)
     {
 	_state = _sys_model->Simulate(_state,inputs);
-	// _state(3) = clamp_angle(_state(3));
     }
 
     ColumnVector

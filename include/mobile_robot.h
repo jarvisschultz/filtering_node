@@ -56,7 +56,6 @@ namespace BFL{
       void Move(MatrixWrapper::ColumnVector inputs);
       MatrixWrapper::ColumnVector Measure();
       MatrixWrapper::ColumnVector GetState(); //method only for simulation purposes
-      double clamp_angle(double theta);
 
     private:
       Gaussian* _system_Uncertainty;

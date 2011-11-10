@@ -338,19 +338,6 @@ public:
 
 
 
-    
-
-    // // in this callback, let's integrate the model forward to get an
-    // // expectation
-    // void timercb(const ros::TimerEvent& e)
-    // 	{
-    // 	    return;
-    // 	}
-
-
-
-
-
     // in this function, we take in two angles, and using one as the
     // reference, we keep adding and subtracting 2pi from the other to
     // find the mininmum angle between the two:
