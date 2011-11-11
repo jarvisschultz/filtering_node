@@ -37,7 +37,7 @@
 
 // Kalman filter stuff:
 #include "../include/mobile_robot.h"
-#include "../include/nonlinearanalyticconditionalgaussianmobile.h"
+#include "../include/filter_constants.h"
 #include <filter/extendedkalmanfilter.h>
 #include <model/linearanalyticsystemmodel_gaussianuncertainty.h>
 #include <model/linearanalyticmeasurementmodel_gaussianuncertainty.h>
@@ -273,11 +273,10 @@ public:
 
 	    // Integrate the model forward in time:
 	    ROS_DEBUG("Integrating model forward in time");
-	    // dt = (p.header.stamp-current_command.header.stamp).toSec();
 	    if(dt >= 0)
-		mobile_robot->Move(input*dt);
+	    	mobile_robot->Move(input*dt);
 	    else
-		ROS_WARN("Negative dt when integrating system kinematics");
+	    	ROS_WARN("Negative dt when integrating system kinematics");
 
 	    ROS_DEBUG("Updating the filter");
 

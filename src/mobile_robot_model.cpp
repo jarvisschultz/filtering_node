@@ -16,13 +16,12 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 //
 
-#include "mobile_robot.h"
+#include "../include/mobile_robot.h"
 
 using namespace MatrixWrapper;
 
 namespace BFL
 {
-
     MobileRobot::MobileRobot(MatrixWrapper::ColumnVector _init):
         _state(STATE_SIZE)
     {
@@ -52,25 +51,6 @@ namespace BFL
 	_sys_pdf = new NonLinearAnalyticConditionalGaussianMobile(*_system_Uncertainty);
 	_sys_model = new AnalyticSystemModelGaussianUncertainty(_sys_pdf);
 
-	// meas noise
-	SymmetricMatrix meas_noise_Cov(MEAS_SIZE);
-	meas_noise_Cov(1,1) = SIGMA_MEAS_NOISE_ROB;
-	ColumnVector meas_noise_Mu(MEAS_SIZE);
-	meas_noise_Mu(1) = MU_MEAS_NOISE_ROB;
-	_measurement_Uncertainty = new Gaussian(meas_noise_Mu, meas_noise_Cov);
-
-	// create matrix _meas_model for linear measurement model
-	double wall_ct = 2/(sqrt(pow(RICO_WALL,2.0) + 1));
-	Matrix H(MEAS_SIZE,STATE_SIZE);
-	H = 0.0;
-	H(1,1) = wall_ct * RICO_WALL;
-	H(1,2) = 0 - wall_ct;
-	H(1,3) = 0.0;
-
-	// create the measurement model
-	_meas_pdf = new LinearAnalyticConditionalGaussian(H, *_measurement_Uncertainty);
-	_meas_model = new LinearAnalyticMeasurementModelGaussianUncertainty(_meas_pdf);
-
     }
 
     MobileRobot::~MobileRobot()
@@ -88,13 +68,6 @@ namespace BFL
     {
 	_state = _sys_model->Simulate(_state,inputs);
     }
-
-    ColumnVector
-    MobileRobot::Measure()
-    {
-	return _meas_model->Simulate(_state);
-    }
-
 
     ColumnVector
     MobileRobot::GetState()
