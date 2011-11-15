@@ -59,6 +59,7 @@ using namespace std;
 #define SYS_COV_ORI	(0.01)
 #define FILTER_TIMEOUT	(1.0)
 
+
 //---------------------------------------------------------------------------
 // Objects and Functions
 //---------------------------------------------------------------------------
@@ -353,7 +354,7 @@ public:
 	    double th = theta;
 	    while(th > M_PI)
 		th -= 2.0*M_PI;
-	    while(th <= M_PI)
+	    while(th <= -M_PI)
 		th += 2.0*M_PI;
 	    return th;
 	}
