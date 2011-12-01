@@ -226,11 +226,11 @@ public:
     ~FilterGenerator(){
     	delete prior_cont;
     	delete filter;
-	delete sys_pdf;
-	delete sys_model;
-	delete meas_pdf;
-	delete meas_model;
-	delete mobile_robot;
+    	delete sys_pdf;
+    	delete sys_model;
+    	delete meas_pdf;
+    	delete meas_model;
+    	// delete mobile_robot;
     }
 
 
@@ -333,6 +333,7 @@ public:
 		    ROS_WARN("It has been longer than %f" \
 			     "s since a command was published",dt);
 	    }
+	   
 	    return;
 	}
 
