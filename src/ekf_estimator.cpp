@@ -87,7 +87,6 @@ private:
     ExtendedKalmanFilter* filter;
     MobileRobot* mobile_robot;
     
-
 public:
     // Constructor
     FilterGenerator() {
@@ -232,7 +231,6 @@ public:
     	delete meas_model;
     	// delete mobile_robot;
     }
-
 
 
     
