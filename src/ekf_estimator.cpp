@@ -90,6 +90,9 @@ private:
 public:
     // Constructor
     FilterGenerator() {
+	// Print the start of the file...
+	ROS_INFO("Starting Kalman Estimator...");
+
 	ROS_DEBUG("Creating subscribers, and publishers");
 	// Setup ROS stuff:
 	kin_sub = node_.subscribe("/vo", 10, &FilterGenerator::kinectcb, this);
@@ -215,8 +218,6 @@ public:
 	ROS_DEBUG("Creating filter");
 	filter = new ExtendedKalmanFilter(prior_cont);
 			
-	// Now we are ready to run the filter:
-	ROS_INFO("Starting Kalman Estimator...");
     }
 
     
