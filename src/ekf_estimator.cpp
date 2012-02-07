@@ -98,8 +98,6 @@ public:
 	kin_sub = node_.subscribe("/vo", 10, &FilterGenerator::kinectcb, this);
 	input_sub = node_.subscribe
 	    ("/serviced_values", 10, &FilterGenerator::inputcb, this);
-	// timer = node_.createTimer
-	//     (ros::Duration(0.01), &FilterGenerator::timercb, this);
 	est_pub = node_.advertise<nav_msgs::Odometry> ("pose_ekf", 100);
 	
 	// Initialize misc variables:
@@ -294,7 +292,7 @@ public:
 	    curr_state(3) = clamp_angle(curr_state(3));
 
 	    est_pose.header.stamp = p.header.stamp;
-	    est_pose.header.frame_id = "odom_combined";
+	    est_pose.header.frame_id = "map";
 	    est_pose.child_frame_id = "base_footprint_mine";
 	    est_pose.pose.pose.position.x = curr_state(1);
 	    est_pose.pose.pose.position.y = curr_state(2);
