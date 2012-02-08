@@ -95,7 +95,8 @@ public:
 
 	ROS_DEBUG("Creating subscribers, and publishers");
 	// Setup ROS stuff:
-	kin_sub = node_.subscribe("/vo", 10, &FilterGenerator::kinectcb, this);
+	kin_sub = node_.subscribe("/vo", 10,
+				  &FilterGenerator::kinectcb, this);
 	input_sub = node_.subscribe
 	    ("/serviced_values", 10, &FilterGenerator::inputcb, this);
 	est_pub = node_.advertise<nav_msgs::Odometry> ("pose_ekf", 100);
@@ -261,7 +262,8 @@ public:
 
 	    ROS_DEBUG("Checking for filter timeout");
 	    // check for timeout:
-	    double dt = (p.header.stamp - last_measurement.header.stamp).toSec();
+	    double dt = (p.header.stamp -
+			 last_measurement.header.stamp).toSec();
 	    if (dt >= FILTER_TIMEOUT)
 	    {
 		ROS_WARN("Filter timeout detected");
@@ -298,11 +300,25 @@ public:
 	    est_pose.pose.pose.position.y = curr_state(2);
 	    est_pose.pose.pose.position.z = 0.0;
 
-	    geometry_msgs::Quaternion quat = tf::createQuaternionMsgFromYaw(curr_state(3));
+	    geometry_msgs::Quaternion quat =
+		tf::createQuaternionMsgFromYaw(curr_state(3));
 	    est_pose.pose.pose.orientation = quat;
 
 	    ROS_DEBUG("Publishing EFK Pose");
 	    est_pub.publish(est_pose);
+
+	    // now, let's publish the transform that goes along with it
+	    geometry_msgs::TransformStamped est_trans;
+	    est_trans.header.stamp = tstamp;
+	    est_trans.header.frame_id = est_pose.header.frame_id;
+	    est_trans.child_frame_id = est_pose.child_frame_id;
+	    est_trans.transform.translation.x = est_pose.pose.pose.position.x;
+	    est_trans.transform.translation.y = est_pose.pose.pose.position.y;
+	    est_trans.transform.translation.z = est_pose.pose.pose.position.z;
+	    est_trans.transform.rotation = quat;
+
+	    br.sendTransform(est_trans);
+
 	    	    
 	    return;
 	}
@@ -366,8 +382,10 @@ int main(int argc, char **argv)
     
     ros::init(argc, argv, "pose_ekf_mine");
 
-    // log4cxx::LoggerPtr my_logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
-    // my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Debug]);
+    // log4cxx::LoggerPtr my_logger =
+    // log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
+    // my_logger->setLevel(
+    // ros::console::g_level_lookup[ros::console::levels::Debug]);
 
     ros::NodeHandle node;
 
