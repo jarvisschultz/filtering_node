@@ -31,7 +31,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 rosbuild_add_library(mobile_robot src/mobile_robot_model.cpp)
 rosbuild_add_library(mobile_robot_ekf src/mobile_robot_filter.cpp)
-rosbuild_add_executable(ekf_estimator src/ekf_estimator.cpp)
-target_link_libraries(ekf_estimator mobile_robot)
-target_link_libraries(ekf_estimator mobile_robot_ekf)
+rosbuild_add_executable(ekf_filter src/ekf_filter.cpp)
+target_link_libraries(ekf_filter mobile_robot)
+target_link_libraries(ekf_filter mobile_robot_ekf)
 

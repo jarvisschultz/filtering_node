@@ -305,11 +305,12 @@ public:
 	    est_pose.pose.pose.orientation = quat;
 
 	    ROS_DEBUG("Publishing EFK Pose");
-	    est_pub.publish(est_pose);
+	    // est_pub.publish(est_pose);
 
 	    // now, let's publish the transform that goes along with it
+	    ROS_DEBUG("Filling out tf message");
 	    geometry_msgs::TransformStamped est_trans;
-	    est_trans.header.stamp = tstamp;
+	    est_trans.header.stamp = p.header.stamp;
 	    est_trans.header.frame_id = est_pose.header.frame_id;
 	    est_trans.child_frame_id = est_pose.child_frame_id;
 	    est_trans.transform.translation.x = est_pose.pose.pose.position.x;
@@ -317,8 +318,8 @@ public:
 	    est_trans.transform.translation.z = est_pose.pose.pose.position.z;
 	    est_trans.transform.rotation = quat;
 
+	    ROS_DEBUG("Sending transform for the output of the EKF filter");
 	    br.sendTransform(est_trans);
-
 	    	    
 	    return;
 	}
