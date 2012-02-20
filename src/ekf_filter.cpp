@@ -305,11 +305,17 @@ public:
 	    est_pose.pose.pose.orientation = quat;
 
 	    ROS_DEBUG("Publishing EFK Pose");
-	    // est_pub.publish(est_pose);
+	    est_pub.publish(est_pose);
 
 	    // now, let's publish the transform that goes along with it
 	    ROS_DEBUG("Filling out tf message");
 	    geometry_msgs::TransformStamped est_trans;
+	    tf::Quaternion q1, q2;
+	    q1 = tf::createQuaternionFromYaw(curr_state(3));
+	    q2 = tf::Quaternion(1.0,0,0,0);
+	    q1 = q1*q2;
+	    tf::quaternionTFToMsg(q1, quat);
+	    	    
 	    est_trans.header.stamp = p.header.stamp;
 	    est_trans.header.frame_id = est_pose.header.frame_id;
 	    est_trans.child_frame_id = est_pose.child_frame_id;
