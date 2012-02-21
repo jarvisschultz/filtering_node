@@ -68,8 +68,7 @@ class FilterGenerator {
 private:
     ros::NodeHandle node_;
     ros::Publisher est_pub;
-    // ros::Timer timer;
-    ros::Time  tstamp; // model_time;
+    ros::Time  tstamp; 
     ros::Subscriber input_sub, kin_sub;
     nav_msgs::Odometry est_pose;
     tf::TransformListener tf;
@@ -78,7 +77,6 @@ private:
     nav_msgs::Odometry current_measurement, last_measurement;
     ColumnVector sys_noise_mu, prior_mu, measurement, meas_noise_mu, input;
     SymmetricMatrix sys_noise_cov, prior_cov, meas_noise_cov;
-    // Gaussian system_uncertainty, measurement_uncertainty;
     Gaussian* prior_cont;
     NonLinearAnalyticConditionalGaussianMobile* sys_pdf;
     AnalyticSystemModelGaussianUncertainty* sys_model;
@@ -104,119 +102,8 @@ public:
 	// Initialize misc variables:
 	tstamp = ros::Time::now();
 
-
-
-	//********************//
-	// Setup system model:
-	//********************//
-	ROS_DEBUG("Defining system model");
-	ColumnVector sys_noise_mu(NUM_STATES);
-	sys_noise_mu(1) = 0.0;
-	sys_noise_mu(2) = 0.0;
-	sys_noise_mu(3) = 0.0;
-
-	SymmetricMatrix sys_noise_cov(NUM_STATES);
-	sys_noise_cov = 0.0;
-	sys_noise_cov(1,1) = SYS_COV_DIST;
-	sys_noise_cov(2,2) = SYS_COV_DIST;
-	sys_noise_cov(3,3) = SYS_COV_ORI;
-
-	// Create system gaussian:
-	Gaussian system_uncertainty(sys_noise_mu, sys_noise_cov);
-
-	// Create system model:
-	ROS_DEBUG("Creating system model");
-	sys_pdf = new BFL::
-	    NonLinearAnalyticConditionalGaussianMobile(system_uncertainty);
-	sys_model = new BFL::AnalyticSystemModelGaussianUncertainty(sys_pdf);
- 
-
-	//************************//
-	// Setup measurement model:
-	//************************//
-	ROS_DEBUG("Defining measurement model");
-	Matrix Hmat(NUM_STATES, NUM_STATES);
-	Hmat = 0.0;
-	Hmat(1,1) = 1;
-	Hmat(2,2) = 1;
-	Hmat(3,3) = 1;
-
-	ColumnVector meas_noise_mu(NUM_STATES);
-	meas_noise_mu(1) = 0.0;
-	meas_noise_mu(2) = 0.0;
-	meas_noise_mu(3) = 0.0;
-
-	SymmetricMatrix meas_noise_cov(NUM_STATES);
-	meas_noise_cov = 0.0;
-	meas_noise_cov(1,1) = KIN_COV_DIST;
-	meas_noise_cov(2,2) = KIN_COV_DIST;
-	meas_noise_cov(3,3) = KIN_COV_ORI;
-
-	// create measurement gaussian:
-	Gaussian measurement_uncertainty(meas_noise_mu, meas_noise_cov);
-	
-	// create measurement model:
-	ROS_DEBUG("Creating measurement model");
-	meas_pdf = new BFL::LinearAnalyticConditionalGaussian(
-	    Hmat, measurement_uncertainty);
-	meas_model = new BFL::
-	    LinearAnalyticMeasurementModelGaussianUncertainty(meas_pdf);
-
-	//******************************//
-	// Instantiate a MobileRobot
-	//******************************//
-	// First get the initial parameters published by the control node
-	ROS_DEBUG("Creating a MobileRobot");
-	ColumnVector init(STATE_SIZE);
-	init = 0.0;
-	if(ros::param::has("/robot_x0"))
-	{
-	    // Get robot's starting position in
-	    // optimization coordinate system
-	    double temp;
-	    ros::param::get("/robot_x0", temp);
-	    init(1) = temp;
-	    ros::param::get("/robot_z0", temp);
-	    init(2) = -temp;
-	    ros::param::get("/robot_th0", temp);
-
-	    temp = clamp_angle(temp-M_PI/2.0);
-	    init(3) = temp;
-	    // Initialize robot:
-	    mobile_robot = new MobileRobot(init);
-	}
-	else
-	{
-	    ROS_ERROR("NO STARTING INFORMATION:"\
-		      "Must run control node before starting this node!");
-	    exit(0);
-	}
-
-	// Get inputs and measurements initialized:
-	ROS_DEBUG("Defining input size");
-	input.resize(NUM_INPUTS);
-	measurement.resize(NUM_STATES);
-	
-		      
-	//******************************//
-	// Setup initial parameters:
-	//******************************//
-	ROS_DEBUG("Defining filter parameters");
-	ColumnVector prior_mu(STATE_SIZE);
-	for (unsigned int i = 1; i<=STATE_SIZE; i++)
-	    prior_mu(i) = init(i);
-	SymmetricMatrix prior_cov(STATE_SIZE);
-	prior_cov = 0;
-	prior_cov(1,1) = KIN_COV_DIST;
-	prior_cov(2,2) = KIN_COV_DIST;
-	prior_cov(3,3) = KIN_COV_ORI;
-
-	prior_cont = new Gaussian(prior_mu, prior_cov);
-		
-	// Create filter:
-	ROS_DEBUG("Creating filter");
-	filter = new ExtendedKalmanFilter(prior_cont);
-			
+	// initialize all filter paramters:
+	InitializeFilter();			
     }
 
     
@@ -234,11 +121,139 @@ public:
 
 
     
+    void InitializeFilter(void)
+	{
+	    ROS_DEBUG("Initializing all EKF parameters");
+	    
+	    //********************//
+	    // Setup system model:
+	    //********************//
+	    ROS_DEBUG("Defining system model");
+	    ColumnVector sys_noise_mu(NUM_STATES);
+	    sys_noise_mu(1) = 0.0;
+	    sys_noise_mu(2) = 0.0;
+	    sys_noise_mu(3) = 0.0;
+
+	    SymmetricMatrix sys_noise_cov(NUM_STATES);
+	    sys_noise_cov = 0.0;
+	    sys_noise_cov(1,1) = SYS_COV_DIST;
+	    sys_noise_cov(2,2) = SYS_COV_DIST;
+	    sys_noise_cov(3,3) = SYS_COV_ORI;
+
+	    // Create system gaussian:
+	    Gaussian system_uncertainty(sys_noise_mu, sys_noise_cov);
+
+	    // Create system model:
+	    ROS_DEBUG("Creating system model");
+	    sys_pdf = new BFL::
+		NonLinearAnalyticConditionalGaussianMobile(system_uncertainty);
+	    sys_model = new BFL::AnalyticSystemModelGaussianUncertainty(sys_pdf);
+ 
+
+	    //************************//
+	    // Setup measurement model:
+	    //************************//
+	    ROS_DEBUG("Defining measurement model");
+	    Matrix Hmat(NUM_STATES, NUM_STATES);
+	    Hmat = 0.0;
+	    Hmat(1,1) = 1;
+	    Hmat(2,2) = 1;
+	    Hmat(3,3) = 1;
+
+	    ColumnVector meas_noise_mu(NUM_STATES);
+	    meas_noise_mu(1) = 0.0;
+	    meas_noise_mu(2) = 0.0;
+	    meas_noise_mu(3) = 0.0;
+
+	    SymmetricMatrix meas_noise_cov(NUM_STATES);
+	    meas_noise_cov = 0.0;
+	    meas_noise_cov(1,1) = KIN_COV_DIST;
+	    meas_noise_cov(2,2) = KIN_COV_DIST;
+	    meas_noise_cov(3,3) = KIN_COV_ORI;
+
+	    // create measurement gaussian:
+	    Gaussian measurement_uncertainty(meas_noise_mu, meas_noise_cov);
+	
+	    // create measurement model:
+	    ROS_DEBUG("Creating measurement model");
+	    meas_pdf = new BFL::LinearAnalyticConditionalGaussian(
+		Hmat, measurement_uncertainty);
+	    meas_model = new BFL::
+		LinearAnalyticMeasurementModelGaussianUncertainty(meas_pdf);
+
+	    //******************************//
+	    // Instantiate a MobileRobot
+	    //******************************//
+	    // First get the initial parameters published by the control node
+	    ROS_DEBUG("Creating a MobileRobot");
+	    ColumnVector init(STATE_SIZE);
+	    init = 0.0;
+	    if(ros::param::has("/robot_x0"))
+	    {
+		// Get robot's starting position in
+		// optimization coordinate system
+		double temp;
+		ros::param::get("/robot_x0", temp);
+		init(1) = temp;
+		ros::param::get("/robot_z0", temp);
+		init(2) = -temp;
+		ros::param::get("/robot_th0", temp);
+
+		temp = clamp_angle(temp-M_PI/2.0);
+		init(3) = temp;
+		// Initialize robot:
+		mobile_robot = new MobileRobot(init);
+	    }
+	    else
+	    {
+		ROS_ERROR("NO STARTING INFORMATION:"\
+			  "Must run control node before starting this node!");
+		exit(0);
+	    }
+
+	    // Get inputs and measurements initialized:
+	    ROS_DEBUG("Defining input size");
+	    input.resize(NUM_INPUTS);
+	    measurement.resize(NUM_STATES);
+	
+		      
+	    //******************************//
+	    // Setup initial parameters:
+	    //******************************//
+	    ROS_DEBUG("Defining filter parameters");
+	    ColumnVector prior_mu(STATE_SIZE);
+	    for (unsigned int i = 1; i<=STATE_SIZE; i++)
+		prior_mu(i) = init(i);
+	    SymmetricMatrix prior_cov(STATE_SIZE);
+	    prior_cov = 0;
+	    prior_cov(1,1) = KIN_COV_DIST;
+	    prior_cov(2,2) = KIN_COV_DIST;
+	    prior_cov(3,3) = KIN_COV_ORI;
+
+	    prior_cont = new Gaussian(prior_mu, prior_cov);
+		
+	    // Create filter:
+	    ROS_DEBUG("Creating filter");
+	    filter = new ExtendedKalmanFilter(prior_cont);
+	}
+
+    
 
     // In this callback, let's update the current measurement, check
     // angles, then update the filter, then publish the results.
     void kinectcb(const nav_msgs::Odometry p)
 	{
+	    int operating_condition = 0;
+	    bool reset = false;
+	    // check out if we need to reset the filter parameters:
+	    if(ros::param::has("operating_condition"))
+	    {
+		ros::param::get("operating_condition", operating_condition);
+		reset = reset_logic(operating_condition);
+		if (reset)
+		    InitializeFilter();
+	    }
+	    
 	    ROS_DEBUG("Kinect callback triggered");
 	    static bool first_flag = true;
 	    if (first_flag)
@@ -331,6 +346,24 @@ public:
 	}
 
 
+    // in this function, we will determine if we need to reset the
+    // kalman filter:
+    bool reset_logic(int op)
+	{
+	    bool reset = false;
+	    static int op_old = 0;
+
+	    // if we are in calibrate, and we weren't previously,
+	    // let's reset the filter:
+	    if (op == 1 && op_old != 1)
+		reset = true;
+	    // if we are in run, and we were not previously, let's reset:
+	    else if (op == 2 && op_old != 2)
+		reset = true;
+	    
+	    op_old = op;
+	    return(reset);
+	}
 
     
 
