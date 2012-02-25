@@ -215,7 +215,8 @@ public:
 	    ROS_DEBUG("Defining input size");
 	    input.resize(NUM_INPUTS);
 	    measurement.resize(NUM_STATES);
-	
+	    input(1) = 0;
+	    input(2) = 0;
 		      
 	    //******************************//
 	    // Setup initial parameters:
@@ -386,6 +387,7 @@ public:
 		    ROS_WARN("It has been longer than %f" \
 			     "s since a command was published",dt);
 	    }
+	    ROS_DEBUG("Current Input values are v = %f w = %f",input(1), input(2));
 	   
 	    return;
 	}
