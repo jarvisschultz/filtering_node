@@ -105,7 +105,6 @@ public:
 	// initialize all filter paramters:
 	InitializeFilter();			
     }
-
     
 
     // Destructor
