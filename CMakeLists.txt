@@ -35,3 +35,6 @@ rosbuild_add_executable(ekf_filter src/ekf_filter.cpp)
 target_link_libraries(ekf_filter mobile_robot)
 target_link_libraries(ekf_filter mobile_robot_ekf)
 
+rosbuild_add_executable(multi_ekf_filter src/multi_ekf_filter.cpp)
+target_link_libraries(multi_ekf_filter mobile_robot)
+target_link_libraries(multi_ekf_filter mobile_robot_ekf)
