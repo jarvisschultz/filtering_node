@@ -93,7 +93,7 @@ public:
 
 	ROS_DEBUG("Creating subscribers, and publishers");
 	// Setup ROS stuff:
-	kin_sub = node_.subscribe("/vo", 10,
+	kin_sub = node_.subscribe("vo", 10,
 				  &FilterGenerator::kinectcb, this);
 	input_sub = node_.subscribe
 	    ("/serviced_values", 10, &FilterGenerator::inputcb, this);
@@ -187,16 +187,16 @@ public:
 	    ROS_DEBUG("Creating a MobileRobot");
 	    ColumnVector init(STATE_SIZE);
 	    init = 0.0;
-	    if(ros::param::has("/robot_x0"))
+	    if(ros::param::has("robot_x0"))
 	    {
 		// Get robot's starting position in
 		// optimization coordinate system
 		double temp;
-		ros::param::get("/robot_x0", temp);
+		ros::param::get("robot_x0", temp);
 		init(1) = temp;
-		ros::param::get("/robot_z0", temp);
+		ros::param::get("robot_z0", temp);
 		init(2) = -temp;
-		ros::param::get("/robot_th0", temp);
+		ros::param::get("robot_th0", temp);
 
 		temp = clamp_angle(temp-M_PI/2.0);
 		init(3) = temp;
