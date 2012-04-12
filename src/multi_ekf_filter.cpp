@@ -53,8 +53,8 @@ using namespace std;
 //---------------------------------------------------------------------------
 #define NUM_STATES	(3)
 #define NUM_INPUTS	(2)
-#define KIN_COV_DIST	(0.5)
-#define KIN_COV_ORI	(100.0)
+#define KIN_COV_DIST	(0.5*10000)
+#define KIN_COV_ORI	(100.0*10000)
 #define SYS_COV_DIST	(0.001)
 #define SYS_COV_ORI	(0.01)
 #define FILTER_TIMEOUT	(1.0)
@@ -253,12 +253,15 @@ public:
 	    int operating_condition = 0;
 	    bool reset = false;
 	    // check out if we need to reset the filter parameters:
-	    if(ros::param::has("operating_condition"))
+	    if(ros::param::has("/operating_condition"))
 	    {
-		ros::param::get("operating_condition", operating_condition);
+		ros::param::get("/operating_condition", operating_condition);
 		reset = reset_logic(operating_condition);
 		if (reset)
+		{
+		    ROS_WARN("Resetting filter");
 		    InitializeFilter();
+		}
 	    }
 	    
 	    ROS_DEBUG("Kinect callback triggered");
@@ -279,8 +282,13 @@ public:
 	    measurement(3) = theta;
 
 	    ROS_DEBUG("Storing measurements");
-	    last_measurement = current_measurement;
-	    current_measurement = p;
+	    if (p.pose.covariance[0] < 10.0)
+	    {
+		last_measurement = current_measurement;
+		current_measurement = p;
+	    }
+	    else
+		ROS_WARN("Huge covariance detected for robot %c",ns);
 
 	    ROS_DEBUG("Checking for filter timeout");
 	    // check for timeout:
@@ -448,3 +456,17 @@ int main(int argc, char **argv)
 }
 
 
+// meas_noise_cov = 0.0;
+// meas_noise_cov(1,1) = p.pose.covariance[0];
+// meas_noise_cov(2,2) = p.pose.covariance[7];
+// meas_noise_cov(3,3) = p.pose.covariance[35];
+
+// std::cout << "covariances = "
+// 	      << p.pose.covariance[0] << " "
+// 	      << p.pose.covariance[7] << " "
+// 	      << p.pose.covariance[35] << std::endl;
+
+// std::cout << "covariances = "
+// 	      << meas_noise_cov(1,1) << " "
+// 	      << meas_noise_cov(2,2) << " "
+// 	      << meas_noise_cov(3,3) << std::endl;

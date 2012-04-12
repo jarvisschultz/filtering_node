@@ -84,7 +84,6 @@ private:
     LinearAnalyticMeasurementModelGaussianUncertainty* meas_model;
     ExtendedKalmanFilter* filter;
     MobileRobot* mobile_robot;
-    char ns;
     
 public:
     // Constructor
@@ -102,13 +101,6 @@ public:
 	
 	// Initialize misc variables:
 	tstamp = ros::Time::now();
-	// get namespace
-	std::string name = ros::this_node::getNamespace();
-	if (!name.empty())
-	    ns = *name.rbegin();
-	else
-	    ns = '0';
-
 	
 	// initialize all filter paramters:
 	InitializeFilter();			
@@ -316,12 +308,9 @@ public:
 	    ColumnVector curr_state = posterior->ExpectedValueGet();
 	    curr_state(3) = clamp_angle(curr_state(3));
 
-	    std::stringstream ss;
-	    ss << "robot_" << ns << "_base_footprint_mine";
-
 	    est_pose.header.stamp = p.header.stamp;
 	    est_pose.header.frame_id = "map";
-	    est_pose.child_frame_id = ss.str();
+	    est_pose.child_frame_id = "base_footprint_mine";
 	    est_pose.pose.pose.position.x = curr_state(1);
 	    est_pose.pose.pose.position.y = curr_state(2);
 	    est_pose.pose.pose.position.z = 0.0;
