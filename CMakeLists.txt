@@ -29,6 +29,11 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_add_executable(example examples/example.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
 
+## add eigen:
+find_package(Eigen REQUIRED)
+include_directories(${EIGEN_INCLUDE_DIRS})
+add_definitions(${EIGEN_DEFINITIONS})
+
 rosbuild_add_library(mobile_robot src/mobile_robot_model.cpp)
 rosbuild_add_library(mobile_robot_ekf src/mobile_robot_filter.cpp)
 rosbuild_add_executable(ekf_filter src/ekf_filter.cpp)
