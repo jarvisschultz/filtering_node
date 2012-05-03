@@ -53,8 +53,8 @@ using namespace std;
 //---------------------------------------------------------------------------
 #define NUM_STATES	(3)
 #define NUM_INPUTS	(2)
-#define KIN_COV_DIST	(0.5*10000)
-#define KIN_COV_ORI	(100.0*10000)
+#define KIN_COV_DIST	(0.5)
+#define KIN_COV_ORI	(100.0)
 #define SYS_COV_DIST	(0.001)
 #define SYS_COV_ORI	(0.01)
 #define FILTER_TIMEOUT	(1.0)
@@ -439,7 +439,7 @@ int main(int argc, char **argv)
 {
     ROSCONSOLE_AUTOINIT;
     
-    ros::init(argc, argv, "pose_ekf_mine");
+    ros::init(argc, argv, "pose_ekf");
 
     // log4cxx::LoggerPtr my_logger =
     // log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
