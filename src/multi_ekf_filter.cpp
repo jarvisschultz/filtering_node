@@ -58,6 +58,7 @@ using namespace std;
 #define SYS_COV_DIST	(0.001)
 #define SYS_COV_ORI	(0.01)
 #define FILTER_TIMEOUT	(1.0)
+#define COV_MULTIPLIER  (10000.0)
 
 
 //---------------------------------------------------------------------------
@@ -81,7 +82,9 @@ private:
     NonLinearAnalyticConditionalGaussianMobile* sys_pdf;
     AnalyticSystemModelGaussianUncertainty* sys_model;
     LinearAnalyticConditionalGaussian* meas_pdf;
+    LinearAnalyticConditionalGaussian* bad_meas_pdf;
     LinearAnalyticMeasurementModelGaussianUncertainty* meas_model;
+    LinearAnalyticMeasurementModelGaussianUncertainty* bad_meas_model;
     ExtendedKalmanFilter* filter;
     MobileRobot* mobile_robot;
     char ns;
@@ -122,7 +125,8 @@ public:
     	delete sys_model;
     	delete meas_pdf;
     	delete meas_model;
-    	// delete mobile_robot;
+    	delete bad_meas_pdf;
+	delete bad_meas_model;
     }
 
 
@@ -131,9 +135,10 @@ public:
 	{
 	    ROS_DEBUG("Initializing all EKF parameters");
 	    
-	    //********************//
-	    // Setup system model:
-	    //********************//
+
+	    /////////////////////////
+            // Setup system model: //
+            /////////////////////////
 	    ROS_DEBUG("Defining system model");
 	    ColumnVector sys_noise_mu(NUM_STATES);
 	    sys_noise_mu(1) = 0.0;
@@ -156,9 +161,10 @@ public:
 	    sys_model = new BFL::AnalyticSystemModelGaussianUncertainty(sys_pdf);
  
 
-	    //************************//
-	    // Setup measurement model:
-	    //************************//
+
+	    //////////////////////////////
+            // Setup measurement model: //
+            //////////////////////////////
 	    ROS_DEBUG("Defining measurement model");
 	    Matrix Hmat(NUM_STATES, NUM_STATES);
 	    Hmat = 0.0;
@@ -187,9 +193,24 @@ public:
 	    meas_model = new BFL::
 		LinearAnalyticMeasurementModelGaussianUncertainty(meas_pdf);
 
-	    //******************************//
-	    // Instantiate a MobileRobot
-	    //******************************//
+	    /////////////////////////////////
+            // Setup bad measurement model //
+            /////////////////////////////////
+	    meas_noise_cov(1,1) = COV_MULTIPLIER*KIN_COV_DIST;
+	    meas_noise_cov(2,2) = COV_MULTIPLIER*KIN_COV_DIST;
+	    meas_noise_cov(3,3) = COV_MULTIPLIER*KIN_COV_ORI;
+
+	    // create bad measurement gaussian:
+	    Gaussian bad_measurement_uncertainty(meas_noise_mu, meas_noise_cov);
+	    bad_meas_pdf = new BFL::LinearAnalyticConditionalGaussian(
+		Hmat, bad_measurement_uncertainty);
+	    bad_meas_model = new BFL::
+		LinearAnalyticMeasurementModelGaussianUncertainty(bad_meas_pdf);
+	    
+	    
+	    ///////////////////////////////
+            // Instantiate a MobileRobot //
+            ///////////////////////////////
 	    // First get the initial parameters published by the control node
 	    ROS_DEBUG("Creating a MobileRobot");
 	    ColumnVector init(STATE_SIZE);
@@ -224,9 +245,9 @@ public:
 	    input(1) = 0;
 	    input(2) = 0;
 		      
-	    //******************************//
-	    // Setup initial parameters:
-	    //******************************//
+	    ///////////////////////////////
+            // Setup initial parameters: //
+            ///////////////////////////////
 	    ROS_DEBUG("Defining filter parameters");
 	    ColumnVector prior_mu(STATE_SIZE);
 	    for (unsigned int i = 1; i<=STATE_SIZE; i++)
@@ -282,13 +303,20 @@ public:
 	    measurement(3) = theta;
 
 	    ROS_DEBUG("Storing measurements");
+	    last_measurement = current_measurement;
+	    current_measurement = p;
+
+	    // check for bad measurements (occlusion?)
+	    LinearAnalyticMeasurementModelGaussianUncertainty* meas =
+		new LinearAnalyticMeasurementModelGaussianUncertainty();
 	    if (p.pose.covariance[0] < 10.0)
-	    {
-		last_measurement = current_measurement;
-		current_measurement = p;
-	    }
+		meas = meas_model;
 	    else
-		ROS_WARN("Huge covariance detected for robot %c",ns);
+	    {
+		ROS_WARN_THROTTLE(1,
+				  "Huge covariance detected for robot %c",ns);
+		meas = bad_meas_model;
+	    }
 
 	    ROS_DEBUG("Checking for filter timeout");
 	    // check for timeout:
@@ -315,7 +343,7 @@ public:
 	    angle_correction(measurement(3), s(3));
 	    
 	    // Now we are ready to update the filter:
-	    filter->Update(sys_model, input*dt, meas_model, measurement);
+	    filter->Update(sys_model, input*dt, meas, measurement);
 
 	    // Fill out the message to publish:
 	    ROS_DEBUG("Extracting and publishing posterior estimate");
