@@ -384,7 +384,9 @@ public:
 			     -last_command.header.stamp).toSec();
 		if (dt >= FILTER_TIMEOUT)
 		    ROS_WARN("It has been longer than %f" \
-			     "s since a command was published",dt);
+			     "s since a command was published (%f, %f)",
+			     dt, sent.header.stamp.toSec(),
+			     last_command.header.stamp.toSec());
 	    }
 	    ROS_DEBUG("Current Input values are v = %f w = %f",input(1), input(2));
 	   

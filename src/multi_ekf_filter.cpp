@@ -316,6 +316,7 @@ public:
 		ROS_WARN_THROTTLE(1,
 				  "Huge covariance detected for robot %c",ns);
 		meas = bad_meas_model;
+		measurement = 0;
 	    }
 
 	    ROS_DEBUG("Checking for filter timeout");
@@ -404,7 +405,7 @@ public:
 	    if (op == 1 && op_old != 1)
 		reset = true;
 	    // if we are in run, and we were not previously, let's reset:
-	    else if (op == 2 && op_old != 2)
+	    else if (op == 2 && op_old != 2 && op_old != 1)
 		reset = true;
 	    
 	    op_old = op;
@@ -430,7 +431,9 @@ public:
 			     -last_command.header.stamp).toSec();
 		if (dt >= FILTER_TIMEOUT)
 		    ROS_WARN("It has been longer than %f" \
-			     "s since a command was published",dt);
+			     "s since a command was published (%f, %f)",
+			     dt, sent.header.stamp.toSec(),
+			     last_command.header.stamp.toSec());
 	    }
 	    ROS_DEBUG("Current Input values are v = %f w = %f",input(1), input(2));
 	   
