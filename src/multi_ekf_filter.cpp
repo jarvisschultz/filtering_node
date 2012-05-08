@@ -289,7 +289,8 @@ public:
 	    static bool first_flag = true;
 	    if (first_flag)
 	    {
-		last_measurement.header.stamp = p.header.stamp;
+		last_measurement.header.stamp = ros::Time::now();
+		current_measurement.header.stamp = ros::Time::now();
 		first_flag = false;
 		return;
 	    }
@@ -297,7 +298,6 @@ public:
 	    ROS_DEBUG("Filling out measurement values");
 	    measurement(1) = p.pose.pose.position.x;
 	    measurement(2) = p.pose.pose.position.y;
-
 	    double theta = tf::getYaw(p.pose.pose.orientation);
 	    theta = clamp_angle(theta);
 	    measurement(3) = theta;
@@ -325,7 +325,9 @@ public:
 			 last_measurement.header.stamp).toSec();
 	    if (dt >= FILTER_TIMEOUT)
 	    {
-		ROS_WARN("Filter timeout detected");
+		ROS_WARN("Filter timeout detected (%f, %f)",
+			 p.header.stamp.toSec(),
+			 last_measurement.header.stamp.toSec());
 		first_flag = true;
 		return;
 	    }
@@ -417,6 +419,7 @@ public:
     // in this callback, let's update the local values of the inputs
     void inputcb(const geometry_msgs::PointStamped sent)
 	{
+	    static bool first_flag = true;
 	    ROS_DEBUG("Input callback triggered");
 	    if ((char) (sent.header.frame_id.c_str())[0] == 'd')
 	    {
@@ -427,13 +430,22 @@ public:
 		last_command = current_command;
 		current_command = sent;
 
+		if (first_flag)
+		{
+		    first_flag = false;
+		    return;
+		}
+		
 		double dt = (sent.header.stamp
 			     -last_command.header.stamp).toSec();
 		if (dt >= FILTER_TIMEOUT)
+		{
 		    ROS_WARN("It has been longer than %f" \
 			     "s since a command was published (%f, %f)",
 			     dt, sent.header.stamp.toSec(),
 			     last_command.header.stamp.toSec());
+		    first_flag = true;
+		}
 	    }
 	    ROS_DEBUG("Current Input values are v = %f w = %f",input(1), input(2));
 	   
