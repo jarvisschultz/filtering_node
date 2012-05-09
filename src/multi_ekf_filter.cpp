@@ -97,10 +97,10 @@ public:
 
 	ROS_DEBUG("Creating subscribers, and publishers");
 	// Setup ROS stuff:
-	kin_sub = node_.subscribe("vo", 10,
-				  &FilterGenerator::kinectcb, this);
+	kin_sub = node_.subscribe("vo", 100,
+				  &FilterGenerator::measurementcb, this);
 	input_sub = node_.subscribe
-	    ("serviced_values", 10, &FilterGenerator::inputcb, this);
+	    ("serviced_values", 100, &FilterGenerator::inputcb, this);
 	est_pub = node_.advertise<nav_msgs::Odometry> ("pose_ekf", 100);
 	
 	// Initialize misc variables:
@@ -269,8 +269,9 @@ public:
 
     // In this callback, let's update the current measurement, check
     // angles, then update the filter, then publish the results.
-    void kinectcb(const nav_msgs::Odometry p)
+    void measurementcb(const nav_msgs::Odometry p)
 	{
+	    ROS_DEBUG("measurement callback triggered");
 	    int operating_condition = 0;
 	    bool reset = false;
 	    // check out if we need to reset the filter parameters:
@@ -285,7 +286,6 @@ public:
 		}
 	    }
 	    
-	    ROS_DEBUG("Kinect callback triggered");
 	    static bool first_flag = true;
 	    if (first_flag)
 	    {
