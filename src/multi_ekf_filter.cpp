@@ -271,7 +271,7 @@ public:
     // angles, then update the filter, then publish the results.
     void measurementcb(const nav_msgs::Odometry p)
 	{
-	    ROS_DEBUG("measurement callback triggered");
+	    ROS_DEBUG("EKF measurement callback triggered");
 	    int operating_condition = 0;
 	    bool reset = false;
 	    // check out if we need to reset the filter parameters:
@@ -420,7 +420,7 @@ public:
     void inputcb(const geometry_msgs::PointStamped sent)
 	{
 	    static bool first_flag = true;
-	    ROS_DEBUG("Input callback triggered");
+	    ROS_DEBUG("EKF input callback triggered");
 	    if ((char) (sent.header.frame_id.c_str())[0] == 'd')
 	    {
 		ROS_DEBUG("Setting input values");
