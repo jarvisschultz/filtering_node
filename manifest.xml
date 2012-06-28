@@ -16,6 +16,7 @@
   <depend package="tf"/>
   <depend package="tf_conversions"/>
   <depend package="bfl"/>
+  <depend package="angles" />
 </package>
 
 

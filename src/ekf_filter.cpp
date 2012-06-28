@@ -32,6 +32,7 @@
 #include <geometry_msgs/Point.h>
 #include <nav_msgs/Odometry.h>
 #include "log4cxx/logger.h"
+#include <angles/angles.h>
 
 #include <math.h>
 
@@ -198,7 +199,7 @@ public:
 		init(2) = -temp;
 		ros::param::get("/robot_th0", temp);
 
-		temp = clamp_angle(temp-M_PI/2.0);
+		temp = angles::normalize_angle(temp-M_PI/2.0);
 		init(3) = temp;
 		// Initialize robot:
 		mobile_robot = new MobileRobot(init);
@@ -268,7 +269,7 @@ public:
 	    measurement(2) = p.pose.pose.position.y;
 
 	    double theta = tf::getYaw(p.pose.pose.orientation);
-	    theta = clamp_angle(theta);
+	    theta = angles::normalize_angle(theta);
 	    measurement(3) = theta;
 
 	    ROS_DEBUG("Storing measurements");
@@ -306,7 +307,7 @@ public:
 	    ROS_DEBUG("Extracting and publishing posterior estimate");
 	    Pdf<ColumnVector> * posterior = filter->PostGet();
 	    ColumnVector curr_state = posterior->ExpectedValueGet();
-	    curr_state(3) = clamp_angle(curr_state(3));
+	    curr_state(3) = angles::normalize_angle(curr_state(3));
 
 	    est_pose.header.stamp = p.header.stamp;
 	    est_pose.header.frame_id = "map";
