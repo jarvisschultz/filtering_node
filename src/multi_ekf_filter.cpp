@@ -359,7 +359,7 @@ public:
 	    ss << "robot_" << ns << "_base_footprint_mine";
 
 	    est_pose.header.stamp = p.header.stamp;
-	    est_pose.header.frame_id = "map";
+	    est_pose.header.frame_id = "/map";
 	    est_pose.child_frame_id = ss.str();
 	    est_pose.pose.pose.position.x = curr_state(1);
 	    est_pose.pose.pose.position.y = curr_state(2);
