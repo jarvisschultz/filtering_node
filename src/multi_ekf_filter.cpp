@@ -60,6 +60,8 @@ using namespace std;
 #define SYS_COV_ORI	(0.01)
 #define FILTER_TIMEOUT	(1.0)
 #define COV_MULTIPLIER  (10000.0)
+#define WHEEL_DIA (0.07619999999999)
+#define WIDTH (0.148/2.0)
 
 
 //---------------------------------------------------------------------------
@@ -284,70 +286,74 @@ public:
 		{
 		    ROS_WARN("Resetting filter");
 		    InitializeFilter();
+		    return;
 		}
 	    }
+
+	    if (operating_condition != 1 || operating_condition != 2)
+	    {
+		static bool first_flag = true;
+		if (first_flag)
+		{
+		    last_measurement.header.stamp = ros::Time::now();
+		    current_measurement.header.stamp = ros::Time::now();
+		    first_flag = false;
+		    return;
+		}
+
+		ROS_DEBUG("Filling out measurement values");
+		measurement(1) = p.pose.pose.position.x;
+		measurement(2) = p.pose.pose.position.y;
+		double theta = tf::getYaw(p.pose.pose.orientation);
+		theta = angles::normalize_angle(theta);
+		measurement(3) = theta;
+
+		ROS_DEBUG("Storing measurements");
+		last_measurement = current_measurement;
+		current_measurement = p;
+
+		// check for bad measurements (occlusion?)
+		LinearAnalyticMeasurementModelGaussianUncertainty* meas =
+		    new LinearAnalyticMeasurementModelGaussianUncertainty();
+		if (p.pose.covariance[0] < 10.0)
+		    meas = meas_model;
+		else
+		{
+		    ROS_WARN_THROTTLE(1,
+				      "Huge covariance detected for robot %c",ns);
+		    meas = bad_meas_model;
+		    measurement = 0;
+		}
+
+		ROS_DEBUG("Checking for filter timeout");
+		// check for timeout:
+		double dt = (p.header.stamp -
+			     last_measurement.header.stamp).toSec();
+		if (dt >= FILTER_TIMEOUT)
+		{
+		    ROS_WARN("Filter timeout detected (%f, %f)",
+			     p.header.stamp.toSec(),
+			     last_measurement.header.stamp.toSec());
+		    first_flag = true;
+		    return;
+		}
+
+		// Integrate the model forward in time:
+		ROS_DEBUG("Integrating model forward in time");
+		if(dt >= 0)
+		    mobile_robot->Move(input*dt);
+		else
+		    ROS_WARN("Negative dt when integrating system kinematics");
+
+		ROS_DEBUG("Updating the filter");
+
+		// Now correct measured angle to be consistent with the estimate:
+		ColumnVector s = mobile_robot->GetState();
+		angle_correction(measurement(3), s(3));
 	    
-	    static bool first_flag = true;
-	    if (first_flag)
-	    {
-		last_measurement.header.stamp = ros::Time::now();
-		current_measurement.header.stamp = ros::Time::now();
-		first_flag = false;
-		return;
+		// Now we are ready to update the filter:
+		filter->Update(sys_model, input*dt, meas, measurement);
 	    }
-
-	    ROS_DEBUG("Filling out measurement values");
-	    measurement(1) = p.pose.pose.position.x;
-	    measurement(2) = p.pose.pose.position.y;
-	    double theta = tf::getYaw(p.pose.pose.orientation);
-	    theta = angles::normalize_angle(theta);
-	    measurement(3) = theta;
-
-	    ROS_DEBUG("Storing measurements");
-	    last_measurement = current_measurement;
-	    current_measurement = p;
-
-	    // check for bad measurements (occlusion?)
-	    LinearAnalyticMeasurementModelGaussianUncertainty* meas =
-		new LinearAnalyticMeasurementModelGaussianUncertainty();
-	    if (p.pose.covariance[0] < 10.0)
-		meas = meas_model;
-	    else
-	    {
-		ROS_WARN_THROTTLE(1,
-				  "Huge covariance detected for robot %c",ns);
-		meas = bad_meas_model;
-		measurement = 0;
-	    }
-
-	    ROS_DEBUG("Checking for filter timeout");
-	    // check for timeout:
-	    double dt = (p.header.stamp -
-			 last_measurement.header.stamp).toSec();
-	    if (dt >= FILTER_TIMEOUT)
-	    {
-		ROS_WARN("Filter timeout detected (%f, %f)",
-			 p.header.stamp.toSec(),
-			 last_measurement.header.stamp.toSec());
-		first_flag = true;
-		return;
-	    }
-
-	    // Integrate the model forward in time:
-	    ROS_DEBUG("Integrating model forward in time");
-	    if(dt >= 0)
-	    	mobile_robot->Move(input*dt);
-	    else
-	    	ROS_WARN("Negative dt when integrating system kinematics");
-
-	    ROS_DEBUG("Updating the filter");
-
-	    // Now correct measured angle to be consistent with the estimate:
-	    ColumnVector s = mobile_robot->GetState();
-	    angle_correction(measurement(3), s(3));
-	    
-	    // Now we are ready to update the filter:
-	    filter->Update(sys_model, input*dt, meas, measurement);
 
 	    // Fill out the message to publish:
 	    ROS_DEBUG("Extracting and publishing posterior estimate");
@@ -421,13 +427,35 @@ public:
     void inputcb(const geometry_msgs::PointStamped sent)
 	{
 	    static bool first_flag = true;
+	    char type = (char) (sent.header.frame_id.c_str())[0];
+	    bool valid = true;
 	    ROS_DEBUG("EKF input callback triggered");
-	    if ((char) (sent.header.frame_id.c_str())[0] == 'd')
+	    switch(type)
 	    {
-		ROS_DEBUG("Setting input values");
+	    case 'd':
 		input(1) = sent.point.x;
 		input(2) = sent.point.y;
-
+		break;
+	    case 'i':
+		input(1) = sent.point.x;
+		input(2) = sent.point.y;
+		break;
+	    case 'h':
+		input(1) = WHEEL_DIA*(sent.point.x+sent.point.y)/4.0;
+		input(2) = WHEEL_DIA*(sent.point.y-sent.point.x)/(4.0*WIDTH);
+		break;
+	    case 'n':
+		input(1) = WHEEL_DIA*(sent.point.x+sent.point.y)/4.0;
+		input(2) = WHEEL_DIA*(sent.point.y-sent.point.x)/(4.0*WIDTH);
+		break;
+	    default :
+		input(1) = 0;
+		input(2) = 0;
+		valid = false;
+		break;
+	    }
+	    if (valid)
+	    {
 		last_command = current_command;
 		current_command = sent;
 
