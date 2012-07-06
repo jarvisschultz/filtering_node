@@ -290,7 +290,7 @@ public:
 		}
 	    }
 
-	    if (operating_condition != 1 || operating_condition != 2)
+	    if (operating_condition == 1 || operating_condition == 2)
 	    {
 		static bool first_flag = true;
 		if (first_flag)
