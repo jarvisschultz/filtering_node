@@ -353,6 +353,7 @@ public:
 	    
 		// Now we are ready to update the filter:
 		filter->Update(sys_model, input*dt, meas, measurement);
+		delete meas;
 	    }
 
 	    // Fill out the message to publish:
@@ -397,7 +398,7 @@ public:
 
 	    ROS_DEBUG("Sending transform for the output of the EKF filter");
 	    br.sendTransform(est_trans);
-	    	    
+
 	    return;
 	}
 
@@ -424,7 +425,7 @@ public:
     
 
     // in this callback, let's update the local values of the inputs
-    void inputcb(const geometry_msgs::PointStamped sent)
+    void inputcb(const geometry_msgs::PointStamped &sent)
 	{
 	    static bool first_flag = true;
 	    char type = (char) (sent.header.frame_id.c_str())[0];
