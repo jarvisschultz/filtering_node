@@ -353,7 +353,6 @@ public:
 	    
 		// Now we are ready to update the filter:
 		filter->Update(sys_model, input*dt, meas, measurement);
-		delete meas;
 	    }
 
 	    // Fill out the message to publish:
