@@ -229,7 +229,7 @@ public:
 		init(2) = -temp;
 		ros::param::get("robot_th0", temp);
 
-		temp = angles::normalize_angle(temp-M_PI/2.0);
+		temp = angles::normalize_angle(temp);
 		init(3) = temp;
 		// Initialize robot:
 		mobile_robot = new MobileRobot(init);
@@ -278,16 +278,13 @@ public:
 	    int operating_condition = 0;
 	    bool reset = false;
 	    // check out if we need to reset the filter parameters:
-	    if(ros::param::has("/operating_condition"))
+	    ros::param::getCached("/operating_condition", operating_condition);
+	    reset = reset_logic(operating_condition);
+	    if (reset)
 	    {
-		ros::param::get("/operating_condition", operating_condition);
-		reset = reset_logic(operating_condition);
-		if (reset)
-		{
-		    ROS_WARN("Resetting filter");
-		    InitializeFilter();
-		    return;
-		}
+		ROS_WARN("Resetting filter");
+		InitializeFilter();
+		return;
 	    }
 
 	    if (operating_condition == 1 || operating_condition == 2)
@@ -372,7 +369,7 @@ public:
 	    est_pose.pose.pose.position.z = 0.0;
 
 	    geometry_msgs::Quaternion quat =
-		tf::createQuaternionMsgFromYaw(curr_state(3));
+	    	tf::createQuaternionMsgFromYaw(curr_state(3));
 	    est_pose.pose.pose.orientation = quat;
 
 	    ROS_DEBUG("Publishing EFK Pose");
@@ -426,6 +423,7 @@ public:
     // in this callback, let's update the local values of the inputs
     void inputcb(const geometry_msgs::PointStamped &sent)
 	{
+	    input.resize(NUM_INPUTS);
 	    static bool first_flag = true;
 	    char type = (char) (sent.header.frame_id.c_str())[0];
 	    bool valid = true;
