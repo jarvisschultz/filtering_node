@@ -304,7 +304,7 @@ public:
 		double theta = tf::getYaw(p.pose.pose.orientation);
 		theta = angles::normalize_angle(theta);
 		measurement(3) = theta;
-
+		
 		ROS_DEBUG("Storing measurements");
 		last_measurement = current_measurement;
 		current_measurement = p;
@@ -347,7 +347,11 @@ public:
 		// Now correct measured angle to be consistent with the estimate:
 		ColumnVector s = mobile_robot->GetState();
 		angle_correction(measurement(3), s(3));
-	    
+
+		ROS_INFO("theta = %f", theta);
+		ROS_INFO("Measurement(3) = %f", measurement(3));
+		ROS_INFO("Model Angle = %f", s(3));
+
 		// Now we are ready to update the filter:
 		filter->Update(sys_model, input*dt, meas, measurement);
 	    }
@@ -356,8 +360,10 @@ public:
 	    ROS_DEBUG("Extracting and publishing posterior estimate");
 	    Pdf<ColumnVector> * posterior = filter->PostGet();
 	    ColumnVector curr_state = posterior->ExpectedValueGet();
+	    ROS_INFO("Before update = %f", curr_state(3));
 	    curr_state(3) = angles::normalize_angle(curr_state(3));
-
+	    ROS_INFO("After update = %f\r\n", curr_state(3));
+	    
 	    std::stringstream ss;
 	    ss << "robot_" << ns << "_base_footprint_mine";
 
@@ -423,7 +429,6 @@ public:
     // in this callback, let's update the local values of the inputs
     void inputcb(const geometry_msgs::PointStamped &sent)
 	{
-	    input.resize(NUM_INPUTS);
 	    static bool first_flag = true;
 	    char type = (char) (sent.header.frame_id.c_str())[0];
 	    bool valid = true;
@@ -480,7 +485,6 @@ public:
 	}
 
 
-
     // in this function, we take in two angles, and using one as the
     // reference, we keep adding and subtracting 2pi from the other to
     // find the mininmum angle between the two:
@@ -490,17 +494,6 @@ public:
 	    while ((a-ref) < -M_PI) a += 2*M_PI;
 	}
 
-
-    
-    double clamp_angle(double theta)
-	{
-	    double th = theta;
-	    while(th > M_PI)
-		th -= 2.0*M_PI;
-	    while(th <= -M_PI)
-		th += 2.0*M_PI;
-	    return th;
-	}
     
 };// End class
 
@@ -524,19 +517,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-
-// meas_noise_cov = 0.0;
-// meas_noise_cov(1,1) = p.pose.covariance[0];
-// meas_noise_cov(2,2) = p.pose.covariance[7];
-// meas_noise_cov(3,3) = p.pose.covariance[35];
-
-// std::cout << "covariances = "
-// 	      << p.pose.covariance[0] << " "
-// 	      << p.pose.covariance[7] << " "
-// 	      << p.pose.covariance[35] << std::endl;
-
-// std::cout << "covariances = "
-// 	      << meas_noise_cov(1,1) << " "
-// 	      << meas_noise_cov(2,2) << " "
-// 	      << meas_noise_cov(3,3) << std::endl;

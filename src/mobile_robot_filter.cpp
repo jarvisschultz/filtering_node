@@ -14,6 +14,7 @@
 #include <wrappers/rng/rng.h> // Wrapper around several rng
                                  // libraries
 #define NUMCONDARGUMENTS_MOBILE 2
+#include <angles/angles.h>
 
 namespace BFL
 {
