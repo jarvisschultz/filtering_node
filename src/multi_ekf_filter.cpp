@@ -62,7 +62,7 @@ using namespace std;
 #define COV_MULTIPLIER  (10000.0)
 #define WHEEL_DIA (0.07619999999999)
 #define WIDTH (0.148/2.0)
-
+#define ANGLE_TOLERANCE (0.1*M_PI)
 
 //---------------------------------------------------------------------------
 // Objects and Functions
@@ -229,7 +229,7 @@ public:
 		init(2) = -temp;
 		ros::param::get("robot_th0", temp);
 
-		temp = angles::normalize_angle(temp);
+		temp = angles::normalize_angle(-temp);
 		init(3) = temp;
 		// Initialize robot:
 		mobile_robot = new MobileRobot(init);
@@ -346,11 +346,8 @@ public:
 
 		// Now correct measured angle to be consistent with the estimate:
 		ColumnVector s = mobile_robot->GetState();
-		angle_correction(measurement(3), s(3));
-
-		ROS_INFO("theta = %f", theta);
-		ROS_INFO("Measurement(3) = %f", measurement(3));
-		ROS_INFO("Model Angle = %f", s(3));
+		measurement(3) = s(3) - angles::shortest_angular_distance(
+		    measurement(3), s(3));
 
 		// Now we are ready to update the filter:
 		filter->Update(sys_model, input*dt, meas, measurement);
@@ -360,9 +357,7 @@ public:
 	    ROS_DEBUG("Extracting and publishing posterior estimate");
 	    Pdf<ColumnVector> * posterior = filter->PostGet();
 	    ColumnVector curr_state = posterior->ExpectedValueGet();
-	    ROS_INFO("Before update = %f", curr_state(3));
 	    curr_state(3) = angles::normalize_angle(curr_state(3));
-	    ROS_INFO("After update = %f\r\n", curr_state(3));
 	    
 	    std::stringstream ss;
 	    ss << "robot_" << ns << "_base_footprint_mine";
