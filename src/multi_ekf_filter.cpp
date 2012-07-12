@@ -62,7 +62,6 @@ using namespace std;
 #define COV_MULTIPLIER  (10000.0)
 #define WHEEL_DIA (0.07619999999999)
 #define WIDTH (0.148/2.0)
-#define ANGLE_TOLERANCE (0.1*M_PI)
 
 //---------------------------------------------------------------------------
 // Objects and Functions
@@ -478,17 +477,6 @@ public:
 	   
 	    return;
 	}
-
-
-    // in this function, we take in two angles, and using one as the
-    // reference, we keep adding and subtracting 2pi from the other to
-    // find the mininmum angle between the two:
-    void angle_correction(double& a, double& ref)
-	{
-	    while ((a-ref) > M_PI) a -= 2*M_PI;
-	    while ((a-ref) < -M_PI) a += 2*M_PI;
-	}
-
     
 };// End class
 
