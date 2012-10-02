@@ -54,12 +54,12 @@ using namespace std;
 //---------------------------------------------------------------------------
 #define NUM_STATES	(3)
 #define NUM_INPUTS	(2)
-#define KIN_COV_DIST	(0.5)
-#define KIN_COV_ORI	(100.0)
+#define KIN_COV_DIST	(0.025)
+#define KIN_COV_ORI	(3.0)
 #define SYS_COV_DIST	(0.001)
 #define SYS_COV_ORI	(0.01)
 #define FILTER_TIMEOUT	(1.0)
-#define COV_MULTIPLIER  (10000.0)
+#define COV_MULTIPLIER  (1000000.0)
 #define WHEEL_DIA (0.07619999999999)
 #define WIDTH (0.148/2.0)
 
@@ -274,7 +274,7 @@ public:
     void measurementcb(const nav_msgs::Odometry p)
 	{
 	    ROS_DEBUG("EKF measurement callback triggered");
-	    int operating_condition = 0;
+	    static int operating_condition = 0;
 	    bool reset = false;
 	    // check out if we need to reset the filter parameters:
 	    ros::param::getCached("/operating_condition", operating_condition);
