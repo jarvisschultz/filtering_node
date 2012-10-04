@@ -308,19 +308,6 @@ public:
 		last_measurement = current_measurement;
 		current_measurement = p;
 
-		// check for bad measurements (occlusion?)
-		LinearAnalyticMeasurementModelGaussianUncertainty* meas =
-		    new LinearAnalyticMeasurementModelGaussianUncertainty();
-		if (p.pose.covariance[0] < 10.0)
-		    meas = meas_model;
-		else
-		{
-		    ROS_WARN_THROTTLE(1,
-				      "Huge covariance detected for robot %c",ns);
-		    meas = bad_meas_model;
-		    measurement = 0;
-		}
-
 		ROS_DEBUG("Checking for filter timeout");
 		// check for timeout:
 		double dt = (p.header.stamp -
@@ -340,6 +327,20 @@ public:
 		    mobile_robot->Move(input*dt);
 		else
 		    ROS_WARN("Negative dt when integrating system kinematics");
+
+		
+		// check for bad measurements (occlusion?)
+		LinearAnalyticMeasurementModelGaussianUncertainty* meas =
+		    new LinearAnalyticMeasurementModelGaussianUncertainty();
+		if (p.pose.covariance[0] < 10.0)
+		    meas = meas_model;
+		else
+		{
+		    ROS_WARN_THROTTLE(1,
+				      "Huge covariance detected for robot %c",ns);
+		    meas = bad_meas_model;
+		    measurement = mobile_robot->GetState();
+		}
 
 		ROS_DEBUG("Updating the filter");
 
