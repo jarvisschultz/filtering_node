@@ -71,7 +71,7 @@ class FilterGenerator {
 private:
     ros::NodeHandle node_;
     ros::Publisher est_pub;
-    ros::Time  tstamp; 
+    ros::Time  tstamp;
     ros::Subscriber input_sub, kin_sub;
     nav_msgs::Odometry est_pose;
     tf::TransformListener tf;
@@ -90,7 +90,7 @@ private:
     ExtendedKalmanFilter* filter;
     MobileRobot* mobile_robot;
     char ns;
-    
+
 public:
     // Constructor
     FilterGenerator() {
@@ -104,7 +104,7 @@ public:
 	input_sub = node_.subscribe
 	    ("serviced_values", 100, &FilterGenerator::inputcb, this);
 	est_pub = node_.advertise<nav_msgs::Odometry> ("pose_ekf", 100);
-	
+
 	// Initialize misc variables:
 	tstamp = ros::Time::now();
 	// get namespace
@@ -115,9 +115,9 @@ public:
 	    ns = '0';
 
 	// initialize all filter paramters:
-	InitializeFilter();			
+	InitializeFilter();
     }
-    
+
 
     // Destructor
     ~FilterGenerator(){
@@ -132,11 +132,11 @@ public:
     }
 
 
-    
+
     void InitializeFilter(void)
 	{
 	    ROS_DEBUG("Initializing all EKF parameters");
-	    
+
 
 	    /////////////////////////
             // Setup system model: //
@@ -161,7 +161,7 @@ public:
 	    sys_pdf = new BFL::
 		NonLinearAnalyticConditionalGaussianMobile(system_uncertainty);
 	    sys_model = new BFL::AnalyticSystemModelGaussianUncertainty(sys_pdf);
- 
+
 
 
 	    //////////////////////////////
@@ -187,7 +187,7 @@ public:
 
 	    // create measurement gaussian:
 	    Gaussian measurement_uncertainty(meas_noise_mu, meas_noise_cov);
-	
+
 	    // create measurement model:
 	    ROS_DEBUG("Creating measurement model");
 	    meas_pdf = new BFL::LinearAnalyticConditionalGaussian(
@@ -208,8 +208,8 @@ public:
 		Hmat, bad_measurement_uncertainty);
 	    bad_meas_model = new BFL::
 		LinearAnalyticMeasurementModelGaussianUncertainty(bad_meas_pdf);
-	    
-	    
+
+
 	    ///////////////////////////////
             // Instantiate a MobileRobot //
             ///////////////////////////////
@@ -246,7 +246,7 @@ public:
 	    measurement.resize(NUM_STATES);
 	    input(1) = 0;
 	    input(2) = 0;
-		      
+
 	    ///////////////////////////////
             // Setup initial parameters: //
             ///////////////////////////////
@@ -261,13 +261,13 @@ public:
 	    prior_cov(3,3) = KIN_COV_ORI;
 
 	    prior_cont = new Gaussian(prior_mu, prior_cov);
-		
+
 	    // Create filter:
 	    ROS_DEBUG("Creating filter");
 	    filter = new ExtendedKalmanFilter(prior_cont);
 	}
 
-    
+
 
     // In this callback, let's update the current measurement, check
     // angles, then update the filter, then publish the results.
@@ -303,7 +303,7 @@ public:
 		double theta = tf::getYaw(p.pose.pose.orientation);
 		theta = angles::normalize_angle(theta);
 		measurement(3) = theta;
-		
+
 		ROS_DEBUG("Storing measurements");
 		last_measurement = current_measurement;
 		current_measurement = p;
@@ -328,7 +328,7 @@ public:
 		else
 		    ROS_WARN("Negative dt when integrating system kinematics");
 
-		
+
 		// check for bad measurements (occlusion?)
 		LinearAnalyticMeasurementModelGaussianUncertainty* meas =
 		    new LinearAnalyticMeasurementModelGaussianUncertainty();
@@ -358,7 +358,7 @@ public:
 	    Pdf<ColumnVector> * posterior = filter->PostGet();
 	    ColumnVector curr_state = posterior->ExpectedValueGet();
 	    curr_state(3) = angles::normalize_angle(curr_state(3));
-	    
+
 	    std::stringstream ss;
 	    ss << "robot_" << ns << "_base_footprint_mine";
 
@@ -384,7 +384,7 @@ public:
 	    q2 = tf::Quaternion(1.0,0,0,0);
 	    q1 = q1*q2;
 	    tf::quaternionTFToMsg(q1, quat);
-	    	    
+
 	    est_trans.header.stamp = p.header.stamp;
 	    est_trans.header.frame_id = est_pose.header.frame_id;
 	    est_trans.child_frame_id = est_pose.child_frame_id;
@@ -414,12 +414,12 @@ public:
 	    // if we are in run, and we were not previously, let's reset:
 	    else if (op == 2 && op_old != 2 && op_old != 1)
 		reset = true;
-	    
+
 	    op_old = op;
 	    return(reset);
 	}
 
-    
+
 
     // in this callback, let's update the local values of the inputs
     void inputcb(const geometry_msgs::PointStamped &sent)
@@ -462,7 +462,7 @@ public:
 		    first_flag = false;
 		    return;
 		}
-		
+
 		double dt = (sent.header.stamp
 			     -last_command.header.stamp).toSec();
 		if (dt >= FILTER_TIMEOUT)
@@ -475,17 +475,17 @@ public:
 		}
 	    }
 	    ROS_DEBUG("Current Input values are v = %f w = %f",input(1), input(2));
-	   
+
 	    return;
 	}
-    
+
 };// End class
 
 
 int main(int argc, char **argv)
 {
     ROSCONSOLE_AUTOINIT;
-    
+
     ros::init(argc, argv, "pose_ekf");
 
     // log4cxx::LoggerPtr my_logger =
