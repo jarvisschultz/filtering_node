@@ -55,7 +55,7 @@ using namespace std;
 #define NUM_STATES	(3)
 #define NUM_INPUTS	(2)
 #define KIN_COV_DIST	(0.025)
-#define KIN_COV_ORI	(3.0)
+#define KIN_COV_ORI	(100.0)
 #define SYS_COV_DIST	(0.001)
 #define SYS_COV_ORI	(0.01)
 #define FILTER_TIMEOUT	(1.0)
